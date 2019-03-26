@@ -1,3 +1,5 @@
+from django.db.models import Count
+
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
@@ -85,12 +87,26 @@ class ClusterTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')])
-    device_count = tables.Column(accessor=Accessor('devices.count'), orderable=False, verbose_name='Devices')
-    vm_count = tables.Column(accessor=Accessor('virtual_machines.count'), orderable=False, verbose_name='VMs')
+    device_count = tables.Column(accessor=Accessor('devices.count'), orderable=True, verbose_name='Devices')
+    vm_count = tables.Column(accessor=Accessor('virtual_machines.count'), orderable=True, verbose_name='VMs')
 
     class Meta(BaseTable.Meta):
         model = Cluster
         fields = ('pk', 'name', 'type', 'group', 'site', 'device_count', 'vm_count')
+
+    def order_device_count(self, qs, is_descending):
+        qs = qs.annotate(
+            device_count=Count('devices')
+        ).order_by(('-' if not is_descending else '') + 'device_count')
+
+        return (qs, True)
+
+    def order_vm_count(self, qs, is_descending):
+        qs = qs.annotate(
+            vm_count=Count('virtual_machines')
+        ).order_by(('-' if not is_descending else '') + 'vm_count')
+
+        return (qs, True)
 
 
 #
